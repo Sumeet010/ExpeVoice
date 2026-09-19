@@ -265,12 +265,6 @@ export const TravelCurrencyView: React.FC<TravelCurrencyViewProps> = ({
                   calcDirection === 'targetToHome' ? user.homeCurrency : targetCurrency
                 )}
               </div>
-              <div className="text-[11px] text-zinc-500 font-mono">
-                Formula: {calcAmount} ×{' '}
-                {calcDirection === 'targetToHome'
-                  ? (1 / targetInfo.rateToUSD * homeInfo.rateToUSD).toFixed(4)
-                  : (1 / homeInfo.rateToUSD * targetInfo.rateToUSD).toFixed(4)}
-              </div>
             </div>
           </div>
         </div>

@@ -67,13 +67,13 @@ export const exportExpensesToPDF = (
   let y = 18;
 
   // Header Banner
-  doc.setFillColor(15, 23, 42); // slate-900
+  doc.setFillColor(0, 0, 24); 
   doc.rect(0, 0, pageWidth, 28, 'F');
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('VOICE EXPENSE TRACKER', 14, 12);
+  doc.setFont('times', 'bold');
+  doc.text('ExpeVoice', 14, 12);
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');

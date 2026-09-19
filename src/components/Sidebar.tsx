@@ -6,7 +6,6 @@ import {
   Globe,
   Mic,
   FileSpreadsheet,
-  FileCode2,
   ChevronRight,
   Sparkles,
   Settings2,
@@ -258,20 +257,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="flex items-center gap-2.5">
               <FileSpreadsheet className="h-3.5 w-3.5 text-zinc-400" />
               Export Statements
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 text-zinc-600" />
-          </button>
-
-          <button
-            onClick={() => {
-              onOpenDocsModal();
-              if (onCloseMobile) onCloseMobile();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-zinc-900/60 transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <FileCode2 className="h-3.5 w-3.5 text-zinc-400" />
-              Architecture Docs
             </span>
             <ChevronRight className="h-3.5 w-3.5 text-zinc-600" />
           </button>

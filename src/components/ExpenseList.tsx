@@ -14,6 +14,7 @@ import {
   X,
   Receipt,
   Layers,
+  AlertTriangle,
 } from 'lucide-react';
 import { CategoryType, DEFAULT_CATEGORIES, DEFAULT_PAYMENT_METHODS, Expense, PaymentMethod, UserProfile } from '../types';
 import { convertCurrency, formatMoney, SUPPORTED_CURRENCIES } from '../services/currency';
@@ -48,6 +49,9 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   // Manual Add/Edit modal state
   const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  // Delete Confirmation Warning state
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   // Dynamically resolve all categories present in the system
   const availableCategories = useMemo(() => {
@@ -361,7 +365,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                         <Edit2 className="h-3.5 w-3.5" />
                       </button>
                       <button
-                        onClick={() => onDeleteExpense(expense.id)}
+                        onClick={() => setExpenseToDelete(expense)}
                         title="Delete expense"
                         className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
                       >
@@ -498,25 +502,104 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                 </div>
               </div>
 
-              <div className="px-5 py-3 border-t border-zinc-800 flex justify-end gap-2 bg-[#141418]">
-                <Button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  variant="ghost"
-                  size="sm"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="white"
-                  size="sm"
-                  className="font-bold text-zinc-950"
-                >
-                  Save Transaction
-                </Button>
+              <div className="px-5 py-3 border-t border-zinc-800 flex items-center justify-between bg-[#141418]">
+                {expenses.some((e) => e.id === editingExpense.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpenseToDelete(editingExpense);
+                      setIsEditing(false);
+                    }}
+                    className="px-3 py-1.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="white"
+                    size="sm"
+                    className="font-bold text-zinc-950"
+                  >
+                    Save Transaction
+                  </Button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Warning Popup Modal */}
+      {expenseToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#141418] border border-zinc-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+            <div className="flex items-start gap-3.5">
+              <div className="h-10 w-10 rounded-xl bg-rose-950/60 border border-rose-800/80 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-white">Delete Transaction?</h3>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Are you sure you want to permanently delete this expense? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* Expense details preview card */}
+            <div className="p-3.5 rounded-xl bg-zinc-900/80 border border-zinc-800/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white truncate max-w-[200px]">
+                  {expenseToDelete.description || 'Untitled expense'}
+                </span>
+                <span className="text-xs font-bold text-rose-400 font-mono">
+                  {formatMoney(expenseToDelete.convertedAmount, user.homeCurrency)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+                <span className="font-medium text-zinc-300">{expenseToDelete.category}</span>
+                <span>•</span>
+                <span>{expenseToDelete.paymentMethod}</span>
+                <span>•</span>
+                <span>{expenseToDelete.date}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setExpenseToDelete(null)}
+                className="text-zinc-300 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteExpense(expenseToDelete.id);
+                  setExpenseToDelete(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm shadow-rose-950/50 cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Expense</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -175,15 +175,32 @@ export const parseVoiceInputLocally = (
   }
 
   // 5. Extract Payment Method
-  let detectedPayment: PaymentMethod = 'Credit Card';
-  if (lower.includes('cash')) {
+  let detectedPayment: PaymentMethod = 'UPI'; // default or UPI if indicated
+  if (
+    lower.includes('upi') ||
+    lower.includes('gpay') ||
+    lower.includes('google pay') ||
+    lower.includes('phonepe') ||
+    lower.includes('paytm') ||
+    lower.includes('bhim') ||
+    lower.includes('qr') ||
+    lower.includes('scan')
+  ) {
+    detectedPayment = 'UPI';
+  } else if (lower.includes('cash')) {
     detectedPayment = 'Cash';
-  } else if (lower.includes('apple pay') || lower.includes('google pay') || lower.includes('phone')) {
+  } else if (lower.includes('apple pay') || lower.includes('applepay')) {
     detectedPayment = 'Apple Pay';
   } else if (lower.includes('debit')) {
     detectedPayment = 'Debit Card';
-  } else if (lower.includes('bank transfer') || lower.includes('wire') || lower.includes('ach')) {
+  } else if (lower.includes('credit card') || lower.includes('card')) {
+    detectedPayment = 'Credit Card';
+  } else if (lower.includes('bank transfer') || lower.includes('wire') || lower.includes('ach') || lower.includes('net banking') || lower.includes('neft') || lower.includes('rtgs') || lower.includes('imps')) {
     detectedPayment = 'Bank Transfer';
+  } else if (lower.includes('other') || lower.includes('others') || lower.includes('cheque') || lower.includes('crypto')) {
+    detectedPayment = 'Others';
+  } else {
+    detectedPayment = 'UPI';
   }
 
   // 6. Clean Description
@@ -191,7 +208,7 @@ export const parseVoiceInputLocally = (
   let description = clean
     .replace(/^(i spent|spent|paid|add|bought|charge|recorded|logged|purchase of)\s+/i, '')
     .replace(/(?:for|on|at)\s+/i, '')
-    .replace(/(?:with|by|using)\s+(?:cash|card|credit card|apple pay|debit card)/i, '')
+    .replace(/(?:with|by|using|via|through)\s+(?:upi|gpay|google pay|phonepe|paytm|bhim|cash|card|credit card|debit card|apple pay|bank transfer|others?)/i, '')
     .trim();
 
   // If description starts with an amount or currency, clean it up

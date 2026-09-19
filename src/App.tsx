@@ -219,11 +219,8 @@ export default function App() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-white flex items-center justify-center">
-                <span className="font-extrabold text-xs text-zinc-950 font-mono tracking-tighter">E</span>
-              </div>
-              <span className="font-bold text-sm text-white">ExpeVoice</span>
+            <div className="flex items-center">
+              <span className="font-bold text-base text-white tracking-tight">ExpeVoice</span>
             </div>
           </div>
 

@@ -15,7 +15,7 @@ import {
   Receipt,
   Layers,
 } from 'lucide-react';
-import { CategoryType, Expense, PaymentMethod, UserProfile } from '../types';
+import { CategoryType, DEFAULT_CATEGORIES, DEFAULT_PAYMENT_METHODS, Expense, PaymentMethod, UserProfile } from '../types';
 import { convertCurrency, formatMoney, SUPPORTED_CURRENCIES } from '../services/currency';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -48,6 +48,13 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
   // Manual Add/Edit modal state
   const [isEditing, setIsEditing] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  // Dynamically resolve all categories present in the system
+  const availableCategories = useMemo(() => {
+    const customCats = expenses.map((e) => e.category).filter(Boolean);
+    const set = new Set([...DEFAULT_CATEGORIES, ...customCats]);
+    return Array.from(set);
+  }, [expenses]);
 
   // Filtered & Sorted expenses
   const filteredList = useMemo(() => {
@@ -86,7 +93,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
       homeCurrency: user.homeCurrency,
       category: 'Food & Dining',
       date: new Date().toISOString().split('T')[0],
-      paymentMethod: 'Credit Card',
+      paymentMethod: 'UPI',
       tags: [],
       syncStatus: 'synced',
       createdAt: new Date().toISOString(),
@@ -192,17 +199,23 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
             className="bg-[#18181d] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-400"
           >
             <option value="all">All Categories</option>
-            {[
-              'Food & Dining',
-              'Travel & Transport',
-              'Shopping',
-              'Bills & Utilities',
-              'Entertainment',
-              'Health',
-              'Other',
-            ].map((c) => (
+            {availableCategories.map((c) => (
               <option key={c} value={c}>
                 {c}
+              </option>
+            ))}
+          </select>
+
+          {/* Payment Method Filter */}
+          <select
+            value={selectedPayment}
+            onChange={(e) => setSelectedPayment(e.target.value)}
+            className="bg-[#18181d] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+          >
+            <option value="all">All Payments</option>
+            {DEFAULT_PAYMENT_METHODS.map((m) => (
+              <option key={m} value={m}>
+                {m}
               </option>
             ))}
           </select>
@@ -444,20 +457,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                       }
                       className="mt-1 w-full bg-[#18181d] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200"
                     >
-                      {[
-                        'Food & Dining',
-                        'Transportation',
-                        'Groceries',
-                        'Shopping',
-                        'Travel',
-                        'Entertainment',
-                        'Health & Wellness',
-                        'Utilities',
-                        'Housing',
-                        'Education',
-                        'Personal Care',
-                        'Other',
-                      ].map((c) => (
+                      {availableCategories.map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>
@@ -477,7 +477,7 @@ export const ExpenseList: React.FC<ExpenseListProps> = ({
                       }
                       className="mt-1 w-full bg-[#18181d] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-200"
                     >
-                      {['Credit Card', 'Cash', 'Debit Card', 'Apple Pay', 'Bank Transfer'].map((m) => (
+                      {DEFAULT_PAYMENT_METHODS.map((m) => (
                         <option key={m} value={m}>
                           {m}
                         </option>

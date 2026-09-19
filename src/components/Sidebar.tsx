@@ -456,7 +456,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
 
               <button
-                title="Google Account details & security"
+                title="Account details & security"
                 onClick={() => {
                   if (onOpenAuthModal) onOpenAuthModal();
                   if (onCloseMobile) onCloseMobile();

@@ -9,6 +9,10 @@ import {
   Sliders,
   Sparkles,
   Target,
+  Plus,
+  Trash2,
+  X,
+  Tag,
 } from 'lucide-react';
 import { BudgetAlert, BudgetLimit, CategoryType, Expense, UserProfile } from '../types';
 import { formatMoney } from '../services/currency';
@@ -32,6 +36,12 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
 }) => {
   const [editableBudgets, setEditableBudgets] = useState<BudgetLimit[]>(budgets);
   const [isSaved, setIsSaved] = useState(false);
+
+  // Custom Category State
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryLimit, setNewCategoryLimit] = useState<number | ''>(5000);
+  const [categoryError, setCategoryError] = useState('');
 
   // Calculate current month's expenses
   const currentMonthExpenses = useMemo(() => {
@@ -163,6 +173,50 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
       prev.map((b) => (b.category === category ? { ...b, monthlyLimit: Math.max(0, newLimit) } : b))
     );
     setIsSaved(false);
+  };
+
+  const handleAddCustomCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) {
+      setCategoryError('Category name cannot be empty');
+      return;
+    }
+
+    const exists = editableBudgets.some(
+      (b) => b.category.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      setCategoryError('A threshold for this category already exists');
+      return;
+    }
+
+    const limit = typeof newCategoryLimit === 'number' && newCategoryLimit >= 0 ? newCategoryLimit : 5000;
+
+    const newEntry: BudgetLimit = {
+      category: trimmed,
+      monthlyLimit: limit,
+      thresholds: [50, 80, 100],
+      period: 'monthly',
+    };
+
+    const updated = [...editableBudgets, newEntry];
+    setEditableBudgets(updated);
+    onSaveBudgets(updated);
+    setNewCategoryName('');
+    setNewCategoryLimit(5000);
+    setCategoryError('');
+    setIsAddingCategory(false);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 3000);
+  };
+
+  const handleDeleteCategory = (catName: string) => {
+    const updated = editableBudgets.filter((b) => b.category !== catName);
+    setEditableBudgets(updated);
+    onSaveBudgets(updated);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
   const handleSave = () => {
@@ -341,15 +395,111 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
 
       {/* Category Budget Limits Table */}
       <div className="rounded-2xl border border-zinc-800/80 bg-[#121215] p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Sliders className="h-4 w-4 text-zinc-400" />
-            <h3 className="text-sm font-bold text-white">Category Spending Thresholds</h3>
+            <div>
+              <h3 className="text-sm font-bold text-white">Category Spending Thresholds</h3>
+              <p className="text-[11px] text-zinc-500">Automated alerts at 80% and 100% capacity</p>
+            </div>
           </div>
-          <span className="text-[11px] text-zinc-500">
-            Automated alerts at 80% and 100%
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setIsAddingCategory(!isAddingCategory);
+                setCategoryError('');
+              }}
+              className="px-3 py-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Custom Category</span>
+            </button>
+          </div>
         </div>
+
+        {/* Add Custom Category Form */}
+        {isAddingCategory && (
+          <form
+            onSubmit={handleAddCustomCategory}
+            className="p-4 rounded-xl bg-[#18181f] border border-zinc-700/80 space-y-3 transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 text-blue-400" />
+                Add New Category Threshold
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingCategory(false);
+                  setCategoryError('');
+                }}
+                className="text-zinc-400 hover:text-white p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-300">Category Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Subscriptions, Fitness, Pets"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="mt-1 w-full bg-[#121215] border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-zinc-300">
+                  Monthly Threshold Limit ({user.homeCurrency})
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="50"
+                  required
+                  placeholder="5000"
+                  value={newCategoryLimit}
+                  onChange={(e) =>
+                    setNewCategoryLimit(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)
+                  }
+                  className="mt-1 w-full bg-[#121215] border border-zinc-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-400 font-bold"
+                />
+              </div>
+            </div>
+
+            {categoryError && (
+              <p className="text-xs text-rose-400 font-medium">{categoryError}</p>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsAddingCategory(false);
+                  setCategoryError('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="white"
+                size="sm"
+                className="font-bold text-zinc-950"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Category
+              </Button>
+            </div>
+          </form>
+        )}
 
         <div className="divide-y divide-zinc-800/60">
           {editableBudgets
@@ -361,7 +511,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
               return (
                 <div
                   key={b.category}
-                  className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                  className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -389,7 +539,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                     <div className="text-xs text-zinc-400 text-right">
                       Spent: <strong className="text-white">{formatMoney(spent, user.homeCurrency)}</strong>
                     </div>
@@ -407,6 +557,14 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                         className="w-24 bg-[#18181d] border border-zinc-800 px-2.5 py-1.5 rounded-xl text-white font-bold text-xs focus:ring-1 focus:ring-zinc-400 focus:outline-none text-right"
                       />
                     </div>
+
+                    <button
+                      onClick={() => handleDeleteCategory(b.category)}
+                      title={`Remove ${b.category} threshold`}
+                      className="p-1.5 text-zinc-600 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               );

@@ -97,6 +97,17 @@ export const runCoreUnitTests = async (): Promise<UnitTestResult[]> => {
     };
   });
 
+  runTest('nlp-6', 'Detect UPI payment method: "Ola cab 350 rupees with UPI"', 'NLP Voice Parsing', () => {
+    const parsed = parseVoiceInputLocally('Ola cab 350 rupees with UPI');
+    const pass = parsed.paymentMethod === 'UPI' && parsed.amount === 350 && parsed.currency === 'INR';
+    return {
+      pass,
+      details: pass ? 'Recognized UPI payment method and INR currency accurately' : 'UPI payment detection failed',
+      expected: 'paymentMethod: UPI, amount: 350, currency: INR',
+      actual: `paymentMethod: ${parsed.paymentMethod}, amount: ${parsed.amount}, currency: ${parsed.currency}`,
+    };
+  });
+
   // --- SUITE 2: Currency Conversion & Arithmetic ---
   runTest('curr-1', 'Convert USD to EUR at current base rate', 'Currency Conversion', () => {
     const converted = convertCurrency(100, 'USD', 'EUR');

@@ -10,7 +10,7 @@ import {
   Send,
   Loader2,
 } from 'lucide-react';
-import { CategoryType, Expense, ParsedVoiceResult, PaymentMethod, UserProfile } from '../types';
+import { CategoryType, DEFAULT_CATEGORIES, DEFAULT_PAYMENT_METHODS, Expense, ParsedVoiceResult, PaymentMethod, UserProfile } from '../types';
 import { convertCurrency, formatMoney, SUPPORTED_CURRENCIES } from '../services/currency';
 import { parseVoiceInputLocally, parseVoiceWithAI } from '../services/nlpVoiceParser';
 
@@ -391,20 +391,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
                     }
                     className="mt-1 w-full bg-zinc-950 border border-zinc-800 px-2 py-1 rounded text-xs text-white font-medium focus:outline-none focus:border-zinc-600"
                   >
-                    {[
-                      'Food & Dining',
-                      'Transportation',
-                      'Groceries',
-                      'Shopping',
-                      'Travel',
-                      'Entertainment',
-                      'Health & Wellness',
-                      'Utilities',
-                      'Housing',
-                      'Education',
-                      'Personal Care',
-                      'Other',
-                    ].map((cat) => (
+                    {DEFAULT_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
@@ -444,7 +431,7 @@ export const VoiceInputModal: React.FC<VoiceInputModalProps> = ({
                     }
                     className="mt-1 w-full bg-zinc-950 border border-zinc-800 px-2 py-1 rounded text-xs text-white focus:outline-none focus:border-zinc-600"
                   >
-                    {['Credit Card', 'Cash', 'Debit Card', 'Apple Pay', 'Bank Transfer'].map((m) => (
+                    {DEFAULT_PAYMENT_METHODS.map((m) => (
                       <option key={m} value={m}>
                         {m}
                       </option>

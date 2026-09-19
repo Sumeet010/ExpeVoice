@@ -1,16 +1,19 @@
-export type CategoryType =
-  | 'Food & Dining'
-  | 'Transportation'
-  | 'Groceries'
-  | 'Shopping'
-  | 'Travel'
-  | 'Entertainment'
-  | 'Health & Wellness'
-  | 'Utilities'
-  | 'Housing'
-  | 'Education'
-  | 'Personal Care'
-  | 'Other';
+export type CategoryType = string;
+
+export const DEFAULT_CATEGORIES = [
+  'Food & Dining',
+  'Transportation',
+  'Groceries',
+  'Shopping',
+  'Travel',
+  'Entertainment',
+  'Health & Wellness',
+  'Utilities',
+  'Housing',
+  'Education',
+  'Personal Care',
+  'Other',
+] as const;
 
 export interface CurrencyRate {
   code: string;
@@ -20,7 +23,25 @@ export interface CurrencyRate {
   flag: string;
 }
 
-export type PaymentMethod = 'Cash' | 'Credit Card' | 'Debit Card' | 'Apple Pay' | 'Bank Transfer';
+export type PaymentMethod =
+  | 'UPI'
+  | 'Credit Card'
+  | 'Debit Card'
+  | 'Cash'
+  | 'Apple Pay'
+  | 'Bank Transfer'
+  | 'Others'
+  | string;
+
+export const DEFAULT_PAYMENT_METHODS: string[] = [
+  'UPI',
+  'Credit Card',
+  'Debit Card',
+  'Cash',
+  'Apple Pay',
+  'Bank Transfer',
+  'Others',
+];
 
 export type SyncStatus = 'synced' | 'pending' | 'syncing' | 'offline' | 'conflict';
 

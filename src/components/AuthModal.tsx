@@ -123,8 +123,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <ShieldCheck className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Google Account & Profile</h2>
-              <p className="text-xs text-zinc-400">OAuth 2.0 authentication & identity management</p>
+              <h2 className="text-base font-bold text-white">Account & Profile</h2>
             </div>
           </div>
 
@@ -139,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Content */}
         <div className="p-6">
           {isGoogleUser ? (
-            /* Signed In: Clean Profile Card */
+            /* Signed In */
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 flex items-center justify-between">
                 <div className="flex items-center gap-3.5">
@@ -174,14 +173,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 space-y-1">
-                  <span className="text-zinc-500 font-medium">User Status</span>
-                  <div className="text-zinc-200 font-bold flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-                    Isolated User Data
-                  </div>
-                </div>
+              <div className="grid gap-3 text-xs">
                 <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 space-y-1">
                   <span className="text-zinc-500 font-medium">Base Currency</span>
                   <div className="text-zinc-200 font-bold">{user.homeCurrency} (₹ INR)</div>
@@ -239,7 +231,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="text-[11px] text-zinc-500 pt-2">
-                Personalized & secure expense tracking
+                ExpeVoice 2026 ~ Terms & Conditon applied. 
               </div>
             </div>
           )}

@@ -135,7 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between px-6 pt-6 pb-4">
           <div className="flex flex-col">
             <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-              Spendnerd
+              ExpeVoice
             </h1>
             <p className="text-xs text-zinc-400 font-medium mt-0.5">
               Manage Expenses Easily.
@@ -275,23 +275,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </span>
             <ChevronRight className="h-3.5 w-3.5 text-zinc-600" />
           </button>
-
-          <button
-            onClick={() => {
-              if (onOpenDbModal) onOpenDbModal();
-              else if (onOpenAuthModal) onOpenAuthModal();
-              if (onCloseMobile) onCloseMobile();
-            }}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-zinc-400 hover:text-white hover:bg-zinc-900/60 transition-colors cursor-pointer"
-          >
-            <span className="flex items-center gap-2.5">
-              <Database className="h-3.5 w-3.5 text-amber-400" />
-              Database Status
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-amber-300 font-mono">
-              Local JSON
-            </span>
-          </button>
         </div>
 
         {/* Font Style Selector Pill */}
@@ -324,7 +307,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => {
                       onUpdateUser({ ...user, fontTheme: font.id });
                       document.documentElement.setAttribute('data-font-theme', font.id);
-                      localStorage.setItem('vocal_ledger_font_theme', font.id);
+                      localStorage.removeItem('vocal_ledger_font_theme');
+                      sessionStorage.setItem('vocal_ledger_font_theme', font.id);
                       setShowFontDropdown(false);
                     }}
                     className={`w-full px-2.5 py-2 text-left rounded-lg transition-colors flex items-center justify-between ${

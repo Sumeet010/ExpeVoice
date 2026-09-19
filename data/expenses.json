@@ -1,0 +1,103 @@
+[
+  {
+    "id": "exp-seed-2",
+    "userId": "user-default-1",
+    "description": "Tokyo Metro Pass 72-Hour Unlimited",
+    "originalAmount": 1500,
+    "originalCurrency": "JPY",
+    "convertedAmount": 820,
+    "homeCurrency": "INR",
+    "category": "Transportation",
+    "date": "2026-09-18",
+    "paymentMethod": "Apple Pay",
+    "isVoiceInput": true,
+    "tags": [
+      "transit",
+      "voice-logged"
+    ],
+    "syncStatus": "synced",
+    "createdAt": "2026-09-18T16:03:25.555Z",
+    "updatedAt": "2026-09-18T16:03:25.555Z"
+  },
+  {
+    "id": "exp-seed-3",
+    "userId": "user-default-1",
+    "description": "Organic Groceries & Fresh Fruit Basket",
+    "originalAmount": 2450,
+    "originalCurrency": "INR",
+    "convertedAmount": 2450,
+    "homeCurrency": "INR",
+    "category": "Groceries",
+    "date": "2026-09-17",
+    "paymentMethod": "Debit Card",
+    "isVoiceInput": false,
+    "tags": [
+      "weekly-prep"
+    ],
+    "syncStatus": "synced",
+    "createdAt": "2026-09-17T16:03:25.555Z",
+    "updatedAt": "2026-09-17T16:03:25.555Z"
+  },
+  {
+    "id": "exp-seed-4",
+    "userId": "user-default-1",
+    "description": "TGV High Speed Train Paris to Lyon",
+    "originalAmount": 68,
+    "originalCurrency": "EUR",
+    "convertedAmount": 6201,
+    "homeCurrency": "INR",
+    "category": "Travel",
+    "date": "2026-09-16",
+    "paymentMethod": "Credit Card",
+    "isVoiceInput": true,
+    "voiceTranscript": "Booked train to Lyon 68 euros using credit card",
+    "tags": [
+      "europe",
+      "travel",
+      "voice-logged"
+    ],
+    "syncStatus": "synced",
+    "createdAt": "2026-09-16T16:03:25.555Z",
+    "updatedAt": "2026-09-16T16:03:25.555Z"
+  },
+  {
+    "id": "exp-seed-5",
+    "userId": "user-default-1",
+    "description": "Coworking Space Day Pass & High-Speed Fiber",
+    "originalAmount": 1800,
+    "originalCurrency": "INR",
+    "convertedAmount": 1800,
+    "homeCurrency": "INR",
+    "category": "Utilities",
+    "date": "2026-09-15",
+    "paymentMethod": "Credit Card",
+    "isVoiceInput": false,
+    "tags": [
+      "remote-work"
+    ],
+    "syncStatus": "synced",
+    "createdAt": "2026-09-15T16:03:25.555Z",
+    "updatedAt": "2026-09-15T16:03:25.555Z"
+  },
+  {
+    "id": "exp-seed-6",
+    "userId": "user-default-1",
+    "description": "Specialty Coffee & Breakfast Croissant",
+    "originalAmount": 380,
+    "originalCurrency": "INR",
+    "convertedAmount": 380,
+    "homeCurrency": "INR",
+    "category": "Food & Dining",
+    "date": "2026-09-15",
+    "paymentMethod": "Apple Pay",
+    "isVoiceInput": true,
+    "voiceTranscript": "Coffee and breakfast 380 rupees paid with apple pay",
+    "tags": [
+      "morning",
+      "voice-logged"
+    ],
+    "syncStatus": "synced",
+    "createdAt": "2026-09-15T02:03:25.555Z",
+    "updatedAt": "2026-09-15T02:03:25.555Z"
+  }
+]

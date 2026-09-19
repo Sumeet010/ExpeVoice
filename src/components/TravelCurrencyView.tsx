@@ -15,8 +15,10 @@ import {
   getCurrencyInfo,
   SUPPORTED_CURRENCIES,
 } from '../services/currency';
+import { currencyOfflineCache } from '../services/currencyOfflineCache';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { RefreshCw, CheckCircle2 } from 'lucide-react';
 
 interface TravelCurrencyViewProps {
   user: UserProfile;
@@ -32,6 +34,23 @@ export const TravelCurrencyView: React.FC<TravelCurrencyViewProps> = ({
   const [targetCurrency, setTargetCurrency] = useState(user.targetTravelCurrency || 'USD');
   const [calcAmount, setCalcAmount] = useState<number>(1000);
   const [calcDirection, setCalcDirection] = useState<'targetToHome' | 'homeToTarget'>('targetToHome');
+  const [isSyncingRates, setIsSyncingRates] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
+
+  const cachedRatesData = currencyOfflineCache.getRates();
+
+  const handleRefreshRates = async () => {
+    setIsSyncingRates(true);
+    try {
+      await currencyOfflineCache.syncRatesFromApi();
+      setSyncSuccess(true);
+      setTimeout(() => setSyncSuccess(false), 2500);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSyncingRates(false);
+    }
+  };
 
   const homeInfo = getCurrencyInfo(user.homeCurrency);
   const targetInfo = getCurrencyInfo(targetCurrency);
@@ -121,6 +140,23 @@ export const TravelCurrencyView: React.FC<TravelCurrencyViewProps> = ({
               ))}
             </select>
           </div>
+
+          {/* Sync Rates API to Offline LocalStorage Button */}
+          <button
+            onClick={handleRefreshRates}
+            disabled={isSyncingRates}
+            title="Fetch Currency Rates API and store in LocalStorage for offline synchronization"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#121215] hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isSyncingRates ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-blue-400" />
+            ) : syncSuccess ? (
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 text-zinc-400" />
+            )}
+            <span>{isSyncingRates ? 'Syncing...' : syncSuccess ? 'Rates Cached!' : 'Sync Rates Offline'}</span>
+          </button>
         </div>
       </div>
 

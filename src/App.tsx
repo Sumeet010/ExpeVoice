@@ -5,7 +5,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { BudgetLimit, Expense, UserProfile } from './types';
-import { offlineSyncEngine } from './services/offlineSync';
+import { expenseApi } from './api/expenseApi';
+import { budgetApi } from './api/budgetApi';
+import { authApi } from './api/authApi';
+import { currencyOfflineCache, purgeNonCurrencyLocalStorage } from './services/currencyOfflineCache';
 import { Sidebar } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { ExpenseList } from './components/ExpenseList';
@@ -16,19 +19,24 @@ import { ExportModal } from './components/ExportModal';
 import { TestRunnerModal } from './components/TestRunnerModal';
 import { DocsModal } from './components/DocsModal';
 import { AuthModal } from './components/AuthModal';
-import { googleAuthService } from './services/googleAuth';
+
+const DEFAULT_APP_USER: UserProfile = {
+  id: 'user-default-1',
+  email: 'sadhanagupta0324@gmail.com',
+  name: 'Sadhana Gupta',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  homeCurrency: 'INR',
+  authProvider: 'google',
+  monthlyBudget: 75000,
+  travelMode: true,
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'budgets' | 'travel'>('dashboard');
-  const [user, setUser] = useState<UserProfile>(() => {
-    const googleSession = googleAuthService.getSession();
-    if (googleSession && googleSession.user) {
-      return googleSession.user;
-    }
-    return offlineSyncEngine.getUser();
-  });
-  const [expenses, setExpenses] = useState<Expense[]>(offlineSyncEngine.getExpenses());
-  const [budgets, setBudgets] = useState<BudgetLimit[]>(offlineSyncEngine.getBudgets());
+  const [user, setUser] = useState<UserProfile>(DEFAULT_APP_USER);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [budgets, setBudgets] = useState<BudgetLimit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Modal States
@@ -38,52 +46,86 @@ export default function App() {
   const [isDocsOpen, setIsDocsOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  // Sync with Local & Backend Engine silently in background
+  // Load from MongoDB Backend & initialize Currency Rates offline cache
   useEffect(() => {
-    setExpenses(offlineSyncEngine.getExpenses());
-    setBudgets(offlineSyncEngine.getBudgets());
-    setUser(offlineSyncEngine.getUser());
+    // 1. Purge all non-currency localStorage entries (expenses, budgets, user session, queues)
+    purgeNonCurrencyLocalStorage();
 
-    const unsubscribe = offlineSyncEngine.subscribe((updatedExpenses, updatedBudgets) => {
-      setExpenses([...updatedExpenses]);
-      setBudgets([...updatedBudgets]);
-    });
+    // 2. Fetch Currency Rates API & store in LocalStorage for offline synchronization
+    currencyOfflineCache.syncRatesFromApi();
 
-    const handleOnline = () => {
-      offlineSyncEngine.triggerSync();
+    // 3. Load active data from MongoDB backend
+    const loadAppData = async () => {
+      try {
+        const loadedUser = await authApi.getCurrentUser().catch(() => DEFAULT_APP_USER);
+        if (loadedUser) setUser(loadedUser);
+        
+        const activeUserId = loadedUser?.id || DEFAULT_APP_USER.id;
+        const [loadedExpenses, loadedBudgets] = await Promise.all([
+          expenseApi.getExpenses(activeUserId).catch(() => []),
+          budgetApi.getBudgets(activeUserId).catch(() => []),
+        ]);
+
+        if (loadedExpenses) setExpenses(loadedExpenses);
+        if (loadedBudgets) setBudgets(loadedBudgets);
+      } catch (err) {
+        console.error('Failed to load initial data from MongoDB:', err);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    window.addEventListener('online', handleOnline);
+    loadAppData();
 
-    // Subscribe to SSE backend stream for multi-device real-time sync
+    // 4. Subscribe to Real-time SSE channel from MongoDB backend
     let eventSource: EventSource | null = null;
     try {
       eventSource = new EventSource('/api/sync/events');
-      eventSource.onmessage = (event) => {
+      eventSource.addEventListener('expense_saved', (e: any) => {
         try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'SYNC_EVENT' && message.payload) {
-            if (message.payload.expenses) {
-              offlineSyncEngine.saveExpensesFromRemote(message.payload.expenses);
+          const savedExpense = JSON.parse(e.data);
+          setExpenses((prev) => {
+            const idx = prev.findIndex((x) => x.id === savedExpense.id);
+            if (idx >= 0) {
+              const copy = [...prev];
+              copy[idx] = savedExpense;
+              return copy;
             }
-            if (message.payload.budgets) {
-              offlineSyncEngine.saveBudgetsFromRemote(message.payload.budgets);
-            }
+            return [savedExpense, ...prev];
+          });
+        } catch {
+          // ignore
+        }
+      });
+
+      eventSource.addEventListener('expense_deleted', (e: any) => {
+        try {
+          const { id } = JSON.parse(e.data);
+          setExpenses((prev) => prev.filter((x) => x.id !== id));
+        } catch {
+          // ignore
+        }
+      });
+
+      eventSource.addEventListener('budgets_updated', (e: any) => {
+        try {
+          const updatedBudgets = JSON.parse(e.data);
+          if (Array.isArray(updatedBudgets)) {
+            setBudgets(updatedBudgets);
           }
         } catch {
-          // ignore parsing error
+          // ignore
         }
-      };
+      });
+
+      eventSource.addEventListener('sync_updated', () => {
+        expenseApi.getExpenses().then((exp) => setExpenses(exp)).catch(() => {});
+      });
     } catch (err) {
-      console.warn('SSE connection could not be established:', err);
+      console.warn('SSE connection could not be opened:', err);
     }
 
-    // Trigger initial sync with backend
-    offlineSyncEngine.triggerSync();
-
     return () => {
-      unsubscribe();
-      window.removeEventListener('online', handleOnline);
       if (eventSource) {
         eventSource.close();
       }
@@ -92,26 +134,55 @@ export default function App() {
 
   // Sync font theme attribute on document root
   useEffect(() => {
-    const savedTheme = user.fontTheme || localStorage.getItem('vocal_ledger_font_theme') || 'sora';
+    const savedTheme = user.fontTheme || sessionStorage.getItem('vocal_ledger_font_theme') || 'sora';
     document.documentElement.setAttribute('data-font-theme', savedTheme);
   }, [user.fontTheme]);
 
-  // Handlers for data updates
-  const handleSaveExpense = (newExpense: Expense) => {
-    offlineSyncEngine.saveExpense(newExpense);
+  // Handlers for data updates persisted to MongoDB
+  const handleSaveExpense = async (newExpense: Expense) => {
+    // Optimistic UI update
+    setExpenses((prev) => {
+      const idx = prev.findIndex((e) => e.id === newExpense.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = newExpense;
+        return copy;
+      }
+      return [newExpense, ...prev];
+    });
+
+    try {
+      await expenseApi.saveExpense(newExpense);
+    } catch (err) {
+      console.error('Failed to persist expense to MongoDB:', err);
+    }
   };
 
-  const handleDeleteExpense = (id: string) => {
-    offlineSyncEngine.deleteExpense(id);
+  const handleDeleteExpense = async (id: string) => {
+    // Optimistic UI update
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+
+    try {
+      await expenseApi.deleteExpense(id);
+    } catch (err) {
+      console.error('Failed to delete expense from MongoDB:', err);
+    }
   };
 
-  const handleSaveBudgets = (updatedBudgets: BudgetLimit[]) => {
-    offlineSyncEngine.saveBudgets(updatedBudgets);
+  const handleSaveBudgets = async (updatedBudgets: BudgetLimit[]) => {
+    setBudgets(updatedBudgets);
+    try {
+      await budgetApi.saveBudgets(updatedBudgets, user.id);
+    } catch (err) {
+      console.error('Failed to persist budgets to MongoDB:', err);
+    }
   };
 
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
-    offlineSyncEngine.saveUser(updatedUser);
+    // Reload user-specific data
+    expenseApi.getExpenses(updatedUser.id).then((res) => setExpenses(res)).catch(() => {});
+    budgetApi.getBudgets(updatedUser.id).then((res) => setBudgets(res)).catch(() => {});
   };
 
   return (
@@ -132,7 +203,6 @@ export default function App() {
         onOpenTestModal={() => setIsTestRunnerOpen(true)}
         onOpenDocsModal={() => setIsDocsOpen(true)}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onOpenDbModal={() => setIsAuthModalOpen(true)}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -151,9 +221,9 @@ export default function App() {
             </button>
             <div className="flex items-center gap-2">
               <div className="h-7 w-7 rounded-lg bg-white flex items-center justify-center">
-                <span className="font-extrabold text-xs text-zinc-950 font-mono tracking-tighter">V</span>
+                <span className="font-extrabold text-xs text-zinc-950 font-mono tracking-tighter">E</span>
               </div>
-              <span className="font-bold text-sm text-white">VoiceLedger</span>
+              <span className="font-bold text-sm text-white">ExpeVoice</span>
             </div>
           </div>
 

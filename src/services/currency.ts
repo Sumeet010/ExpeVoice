@@ -1,4 +1,5 @@
 import { CurrencyRate } from '../types';
+import { currencyOfflineCache } from './currencyOfflineCache';
 
 export const SUPPORTED_CURRENCIES: CurrencyRate[] = [
   { code: 'INR', name: 'Indian Rupee', symbol: '₹', rateToUSD: 83.9, flag: '🇮🇳' },
@@ -39,19 +40,8 @@ export const convertCurrency = (
   const toNormalized = (toCode || 'INR').toUpperCase();
   if (fromNormalized === toNormalized) return Math.round(amount * 100) / 100;
 
-  const from = getCurrencyInfo(fromNormalized);
-  const to = getCurrencyInfo(toNormalized);
-
-  // amount in USD = amount / from.rateToUSD
-  // amount in target = (amount / from.rateToUSD) * to.rateToUSD
-  const amountInUSD = amount / from.rateToUSD;
-  const converted = amountInUSD * to.rateToUSD;
-
-  // Yen or zero decimal currencies
-  if (to.code === 'JPY') {
-    return Math.round(converted);
-  }
-  return Math.round(converted * 100) / 100;
+  // Use the offline-cached rates from LocalStorage
+  return currencyOfflineCache.convert(amount, fromNormalized, toNormalized);
 };
 
 export const formatMoney = (

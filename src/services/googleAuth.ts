@@ -93,7 +93,9 @@ export const googleAuthService = {
   // Get active stored session
   getSession(): GoogleAuthSession | null {
     try {
-      const saved = localStorage.getItem(AUTH_STORAGE_KEY);
+      // Remove any lingering legacy localStorage item
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      const saved = sessionStorage.getItem(AUTH_STORAGE_KEY);
       if (saved) {
         return JSON.parse(saved);
       }
@@ -106,7 +108,8 @@ export const googleAuthService = {
   // Save active session
   saveSession(session: GoogleAuthSession): void {
     try {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
     } catch (e) {
       console.error('Error saving auth session:', e);
     }
@@ -116,6 +119,7 @@ export const googleAuthService = {
   clearSession(): void {
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
     } catch (e) {
       console.error('Error clearing auth session:', e);
     }

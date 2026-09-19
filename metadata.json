@@ -1,0 +1,10 @@
+{
+  "name": "Voice Expense Tracker",
+  "description": "AI-powered voice expense tracker with natural language categorization, multi-currency support, interactive visual analytics, monthly budget alerts, offline synchronization, and report exports.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

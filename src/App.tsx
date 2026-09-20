@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
   Menu,
@@ -20,24 +20,31 @@ import { TestRunnerModal } from './components/TestRunnerModal';
 import { DocsModal } from './components/DocsModal';
 import { AuthModal } from './components/AuthModal';
 
-const DEFAULT_APP_USER: UserProfile = {
-  id: 'user-default-1',
-  email: 'sadhanagupta0324@gmail.com',
-  name: 'Sadhana Gupta',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+const GUEST_USER: UserProfile = {
+  id: 'guest',
+  email: '',
+  name: 'Guest',
+  avatarUrl: '',
   homeCurrency: 'INR',
-  authProvider: 'google',
-  monthlyBudget: 75000,
-  travelMode: true,
+  authProvider: 'guest' as any,
+  monthlyBudget: 0,
+  travelMode: false,
 };
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'budgets' | 'travel'>('dashboard');
-  const [user, setUser] = useState<UserProfile>(DEFAULT_APP_USER);
+  const [user, setUser] = useState<UserProfile>(GUEST_USER);
+  const userRef = useRef<UserProfile>(GUEST_USER);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budgets, setBudgets] = useState<BudgetLimit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Keep userRef in sync with user state
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Modal States
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
@@ -57,19 +64,32 @@ export default function App() {
     // 3. Load active data from MongoDB backend
     const loadAppData = async () => {
       try {
-        const loadedUser = await authApi.getCurrentUser().catch(() => DEFAULT_APP_USER);
-        if (loadedUser) setUser(loadedUser);
-        
-        const activeUserId = loadedUser?.id || DEFAULT_APP_USER.id;
-        const [loadedExpenses, loadedBudgets] = await Promise.all([
-          expenseApi.getExpenses(activeUserId).catch(() => []),
-          budgetApi.getBudgets(activeUserId).catch(() => []),
-        ]);
-
-        if (loadedExpenses) setExpenses(loadedExpenses);
-        if (loadedBudgets) setBudgets(loadedBudgets);
+        const loadedUser = await authApi.getCurrentUser().catch(() => null);
+        if (loadedUser) {
+          setUser(loadedUser);
+          userRef.current = loadedUser;
+          setIsSignedIn(true);
+          const activeUserId = loadedUser.id;
+          const [loadedExpenses, loadedBudgets] = await Promise.all([
+            expenseApi.getExpenses(activeUserId).catch(() => []),
+            budgetApi.getBudgets(activeUserId).catch(() => []),
+          ]);
+          if (loadedExpenses) setExpenses(loadedExpenses);
+          if (loadedBudgets) setBudgets(loadedBudgets);
+        } else {
+          // Not signed in — stay as guest and load guest expenses/budgets
+          setUser(GUEST_USER);
+          userRef.current = GUEST_USER;
+          setIsSignedIn(false);
+          const [loadedExpenses, loadedBudgets] = await Promise.all([
+            expenseApi.getExpenses(GUEST_USER.id).catch(() => []),
+            budgetApi.getBudgets(GUEST_USER.id).catch(() => []),
+          ]);
+          if (loadedExpenses) setExpenses(loadedExpenses);
+          if (loadedBudgets) setBudgets(loadedBudgets);
+        }
       } catch (err) {
-        console.error('Failed to load initial data from MongoDB:', err);
+        console.error('Failed to load initial data:', err);
       } finally {
         setIsLoading(false);
       }
@@ -84,6 +104,11 @@ export default function App() {
       eventSource.addEventListener('expense_saved', (e: any) => {
         try {
           const savedExpense = JSON.parse(e.data);
+          const currentUserId = userRef.current?.id || 'guest';
+          const expenseUserId = savedExpense.userId || 'guest';
+          if (currentUserId !== expenseUserId) {
+            return;
+          }
           setExpenses((prev) => {
             const idx = prev.findIndex((x) => x.id === savedExpense.id);
             if (idx >= 0) {
@@ -119,7 +144,8 @@ export default function App() {
       });
 
       eventSource.addEventListener('sync_updated', () => {
-        expenseApi.getExpenses().then((exp) => setExpenses(exp)).catch(() => {});
+        const currentUserId = userRef.current?.id || 'guest';
+        expenseApi.getExpenses(currentUserId).then((exp) => setExpenses(exp)).catch(() => {});
       });
     } catch (err) {
       console.warn('SSE connection could not be opened:', err);
@@ -140,19 +166,24 @@ export default function App() {
 
   // Handlers for data updates persisted to MongoDB
   const handleSaveExpense = async (newExpense: Expense) => {
+    const expenseWithUser: Expense = {
+      ...newExpense,
+      userId: newExpense.userId || user.id || 'guest',
+    };
+
     // Optimistic UI update
     setExpenses((prev) => {
-      const idx = prev.findIndex((e) => e.id === newExpense.id);
+      const idx = prev.findIndex((e) => e.id === expenseWithUser.id);
       if (idx >= 0) {
         const copy = [...prev];
-        copy[idx] = newExpense;
+        copy[idx] = expenseWithUser;
         return copy;
       }
-      return [newExpense, ...prev];
+      return [expenseWithUser, ...prev];
     });
 
     try {
-      await expenseApi.saveExpense(newExpense);
+      await expenseApi.saveExpense(expenseWithUser);
     } catch (err) {
       console.error('Failed to persist expense to MongoDB:', err);
     }
@@ -180,6 +211,8 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser: UserProfile) => {
     setUser(updatedUser);
+    userRef.current = updatedUser;
+    setIsSignedIn(updatedUser.authProvider === 'google');
     // Reload user-specific data
     expenseApi.getExpenses(updatedUser.id).then((res) => setExpenses(res)).catch(() => {});
     budgetApi.getBudgets(updatedUser.id).then((res) => setBudgets(res)).catch(() => {});

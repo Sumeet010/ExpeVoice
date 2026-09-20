@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { BudgetLimit, CategoryType, Expense, UserProfile } from '../types';
 import { formatMoney } from '../services/currency';
+import { calculateTotalBudget } from '../services/budgetUtils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -103,9 +104,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [filteredExpenses]);
 
   const totalBudget = useMemo(() => {
-    const totalItem = budgets.find((b) => b.category === 'Total');
-    return totalItem ? totalItem.monthlyLimit : user.monthlyBudget || 75000;
-  }, [budgets, user.monthlyBudget]);
+    return calculateTotalBudget(budgets, user);
+  }, [budgets, user]);
 
   const budgetUsagePercent = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 

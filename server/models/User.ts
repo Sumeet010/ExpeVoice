@@ -18,13 +18,12 @@ export interface IUserDocument {
 }
 
 export const DEFAULT_USER: IUserDocument = {
-  id: 'user-default-1',
-  email: 'sadhanagupta0324@gmail.com',
-  name: 'Sadhana Gupta',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  id: 'guest',
+  email: '',
+  name: 'Guest',
+  avatarUrl: '',
   homeCurrency: 'INR',
-  authProvider: 'google',
-  monthlyBudget: 75000,
-  travelMode: true,
-  lastLoginAt: new Date().toISOString(),
+  authProvider: 'guest',
+  monthlyBudget: 0,
+  travelMode: false,
 };

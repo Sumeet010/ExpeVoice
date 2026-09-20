@@ -71,7 +71,11 @@ export class DatabaseService {
         const collection = mongoDb.collection<IExpenseDocument>('expenses');
         const query: any = {};
         if (userId) {
-          query.userId = userId;
+          if (userId === 'guest') {
+            query.$or = [{ userId: 'guest' }, { userId: { $exists: false } }, { userId: null }, { userId: '' }];
+          } else {
+            query.userId = userId;
+          }
         }
         // Exclude any legacy seed items
         query.id = { $not: { $regex: /^exp-seed/ } };
@@ -86,6 +90,9 @@ export class DatabaseService {
     const local = readJsonFile<IExpenseDocument[]>(EXPENSES_FILE, []);
     const cleanLocal = local.filter((e) => !e.id.startsWith('exp-seed-'));
     if (userId) {
+      if (userId === 'guest') {
+        return cleanLocal.filter((e) => !e.userId || e.userId === 'guest');
+      }
       return cleanLocal.filter((e) => e.userId === userId);
     }
     return cleanLocal;
@@ -93,20 +100,22 @@ export class DatabaseService {
 
   static async saveExpense(expense: IExpenseDocument): Promise<IExpenseDocument> {
     const mongoDb = getMongoDb();
+    const { _id, ...expenseData } = expense as any;
     if (mongoDb && isMongoConnected()) {
       try {
         const collection = mongoDb.collection<IExpenseDocument>('expenses');
         await collection.updateOne(
           { id: expense.id },
-          { $set: { ...expense, updatedAt: new Date().toISOString() } },
+          { $set: { ...expenseData, updatedAt: new Date().toISOString() } },
           { upsert: true }
         );
+        return expense;
       } catch (err) {
         console.warn('MongoDB save failed, using local store:', err);
       }
     }
 
-    // Always mirror to local store
+    // Fallback to local store only when MongoDB is disconnected or fails
     const local = readJsonFile<IExpenseDocument[]>(EXPENSES_FILE, []);
     const idx = local.findIndex((e) => e.id === expense.id);
     if (idx >= 0) {
@@ -124,6 +133,7 @@ export class DatabaseService {
       try {
         const collection = mongoDb.collection<IExpenseDocument>('expenses');
         await collection.deleteOne({ id });
+        return true;
       } catch (err) {
         console.warn('MongoDB delete failed:', err);
       }
@@ -142,7 +152,11 @@ export class DatabaseService {
     if (mongoDb && isMongoConnected()) {
       try {
         const collection = mongoDb.collection<IBudgetDocument>('budgets');
-        const query: any = userId ? { userId } : {};
+        const query: any = userId
+          ? userId === 'guest'
+            ? { $or: [{ userId: 'guest' }, { userId: 'default' }, { userId: { $exists: false } }, { userId: null }, { userId: '' }] }
+            : { userId }
+          : {};
         const found = await collection.find(query).toArray();
         if (found.length > 0) {
           return found;
@@ -162,7 +176,7 @@ export class DatabaseService {
 
     const local = readJsonFile<IBudgetDocument[]>(BUDGETS_FILE, []);
     if (userId) {
-      const userBudgets = local.filter((b) => b.userId === userId);
+      const userBudgets = local.filter((b) => b.userId === userId || (userId === 'guest' && (!b.userId || b.userId === 'default')));
       if (userBudgets.length > 0) return userBudgets;
     } else if (local.length > 0) {
       return local;
@@ -189,12 +203,14 @@ export class DatabaseService {
       try {
         const collection = mongoDb.collection<IBudgetDocument>('budgets');
         for (const budget of prepared) {
+          const { _id, ...budgetData } = budget as any;
           await collection.updateOne(
             { category: budget.category, userId: budget.userId },
-            { $set: budget },
+            { $set: budgetData },
             { upsert: true }
           );
         }
+        return prepared;
       } catch (err) {
         console.warn('MongoDB budgets update failed:', err);
       }
@@ -238,16 +254,34 @@ export class DatabaseService {
     return users.find((u) => u.email === email) || null;
   }
 
+  static async getUserByToken(token: string): Promise<IUserDocument | null> {
+    const mongoDb = getMongoDb();
+    if (mongoDb && isMongoConnected()) {
+      try {
+        const collection = mongoDb.collection<IUserDocument>('users');
+        const user = await collection.findOne({ token });
+        if (user) return user;
+      } catch (err) {
+        console.warn('MongoDB find user by token failed:', err);
+      }
+    }
+
+    const users = readJsonFile<IUserDocument[]>(USERS_FILE, []);
+    return users.find((u) => u.token === token) || null;
+  }
+
   static async saveUser(user: IUserDocument): Promise<IUserDocument> {
     const mongoDb = getMongoDb();
+    const { _id, ...userData } = user as any;
     if (mongoDb && isMongoConnected()) {
       try {
         const collection = mongoDb.collection<IUserDocument>('users');
         await collection.updateOne(
           { email: user.email },
-          { $set: { ...user, updatedAt: new Date().toISOString() } },
+          { $set: { ...userData, updatedAt: new Date().toISOString() } },
           { upsert: true }
         );
+        return user;
       } catch (err) {
         console.warn('MongoDB save user failed:', err);
       }

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { BudgetLimit, Expense, UserProfile } from '../types';
 import { formatMoney, getCurrencyInfo, SUPPORTED_CURRENCIES } from '../services/currency';
+import { calculateBudgetStatus } from '../services/budgetUtils';
 import { Button } from './ui/button';
 
 export const FONT_OPTIONS: Array<{
@@ -68,18 +69,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [showFontDropdown, setShowFontDropdown] = useState(false);
   const currentFontTheme = user.fontTheme || 'sora';
 
-  // Quick calculations for active sidebar widget
-  const totalLimit = budgets.find((b) => b.category === 'Total')?.monthlyLimit || user.monthlyBudget || 3500;
-  const currentMonthSpent = expenses
-    .filter((e) => {
-      const d = new Date(e.date);
-      const now = new Date();
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    })
-    .reduce((acc, curr) => acc + curr.convertedAmount, 0);
-
-  const remaining = Math.max(0, totalLimit - currentMonthSpent);
-  const spentPercent = totalLimit > 0 ? Math.min(100, Math.round((currentMonthSpent / totalLimit) * 100)) : 0;
+  // Synced calculations for active sidebar widget
+  const { totalLimit, currentMonthSpent, remaining, spentPercent } = calculateBudgetStatus(
+    budgets,
+    expenses,
+    user
+  );
 
   const navItems = [
     {

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { DatabaseService } from '../services/dbService';
-import { DEFAULT_USER, IUserDocument } from '../models/User';
+import { IUserDocument } from '../models/User';
+
 
 const router = Router();
 
@@ -10,17 +11,16 @@ router.get('/me', async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      // Look up user in MongoDB
-      const defaultUser = await DatabaseService.getUserByEmail('sadhanagupta0324@gmail.com');
-      if (defaultUser) {
-        return res.json({ user: defaultUser });
+      // Look up user by token in MongoDB
+      const user = await DatabaseService.getUserByToken(token);
+      if (user) {
+        return res.json({ user });
       }
     }
-
-    const defaultUser = (await DatabaseService.getUserByEmail(DEFAULT_USER.email)) || DEFAULT_USER;
-    res.json({ user: defaultUser });
+    // No valid token — not signed in
+    return res.status(401).json({ error: 'Not authenticated' });
   } catch (error: any) {
-    res.json({ user: DEFAULT_USER });
+    res.status(401).json({ error: 'Not authenticated' });
   }
 });
 
@@ -51,9 +51,12 @@ router.post('/google', async (req: Request, res: Response) => {
       }
     }
 
-    // Default to user's verified email if none resolved
-    const resolvedEmail = googleEmail || 'sadhanagupta0324@gmail.com';
-    const resolvedName = googleName || 'Sadhana Gupta';
+    // Require a real email from Google OAuth
+    if (!googleEmail) {
+      return res.status(400).json({ error: 'Email is required for authentication' });
+    }
+    const resolvedEmail = googleEmail;
+    const resolvedName = googleName || googleEmail.split('@')[0];
     const token = `google_oauth_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const userDoc: IUserDocument = {

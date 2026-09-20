@@ -1,6 +1,7 @@
 import { UnitTestResult } from '../types';
 import { convertCurrency, formatMoney, getCurrencyInfo } from './currency';
 import { parseVoiceInputLocally } from './nlpVoiceParser';
+import { calculateBudgetStatus, calculateCurrentMonthSpent, calculateTotalBudget } from './budgetUtils';
 
 export const runCoreUnitTests = async (): Promise<UnitTestResult[]> => {
   const results: UnitTestResult[] = [];
@@ -246,6 +247,44 @@ export const runCoreUnitTests = async (): Promise<UnitTestResult[]> => {
       details: pass ? 'RFC 4180 CSV escape compliance verified' : 'CSV escape error',
       expected: '"Dinner, ""Special Event"" at Chef\'s Table"',
       actual: escaped,
+    };
+  });
+
+  // --- SUITE 6: Budget & Ledger Synchronization ---
+  runTest('budget-1', 'Synchronize total budget across category sum and explicit Total', 'Offline Sync Queue', () => {
+    const sampleBudgets = [
+      { category: 'Food & Dining', monthlyLimit: 15000, thresholds: [80], period: 'monthly' as const },
+      { category: 'Groceries', monthlyLimit: 12000, thresholds: [80], period: 'monthly' as const },
+    ];
+    const categorySum = calculateTotalBudget(sampleBudgets);
+    const withExplicitTotal = calculateTotalBudget([
+      ...sampleBudgets,
+      { category: 'Total', monthlyLimit: 50000, thresholds: [80], period: 'monthly' as const },
+    ]);
+    const pass = categorySum === 27000 && withExplicitTotal === 50000;
+    return {
+      pass,
+      details: pass ? 'Budget correctly sums categories when Total not set, and uses Total when configured' : 'Budget sync mismatch',
+      expected: 'categorySum: 27000, withExplicitTotal: 50000',
+      actual: `categorySum: ${categorySum}, withExplicitTotal: ${withExplicitTotal}`,
+    };
+  });
+
+  runTest('budget-2', 'Accurately aggregate current month expenses without timezone shift', 'Offline Sync Queue', () => {
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;
+    const sampleExpenses: any[] = [
+      { id: '1', date: currentMonthStr, convertedAmount: 1200 },
+      { id: '2', date: currentMonthStr, convertedAmount: 800 },
+      { id: '3', date: '2025-01-01', convertedAmount: 5000 },
+    ];
+    const spent = calculateCurrentMonthSpent(sampleExpenses);
+    const pass = spent === 2000;
+    return {
+      pass,
+      details: pass ? 'Successfully filtered and summed only current month expenses' : 'Date filtering error',
+      expected: 'spent: 2000',
+      actual: `spent: ${spent}`,
     };
   });
 

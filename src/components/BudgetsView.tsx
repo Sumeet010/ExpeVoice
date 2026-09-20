@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   DollarSign,
   AlertTriangle,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { BudgetAlert, BudgetLimit, CategoryType, Expense, UserProfile } from '../types';
 import { formatMoney } from '../services/currency';
+import { calculateTotalBudget, calculateCurrentMonthSpent } from '../services/budgetUtils';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 
@@ -37,6 +38,13 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   const [editableBudgets, setEditableBudgets] = useState<BudgetLimit[]>(budgets);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Keep editableBudgets synchronized when backend budgets load or update
+  useEffect(() => {
+    if (budgets && budgets.length > 0) {
+      setEditableBudgets(budgets);
+    }
+  }, [budgets]);
+
   // Custom Category State
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -44,24 +52,30 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   const [categoryError, setCategoryError] = useState('');
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
-  // Calculate current month's expenses
+  // Calculate current month's expenses safely without timezone issues
   const currentMonthExpenses = useMemo(() => {
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
     return expenses.filter((e) => {
+      if (!e || !e.date) return false;
+      const parts = e.date.split('T')[0].split('-');
+      if (parts.length === 3) {
+        return parseInt(parts[0], 10) === currentYear && parseInt(parts[1], 10) - 1 === currentMonth;
+      }
       const d = new Date(e.date);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      return !isNaN(d.getTime()) && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
     });
   }, [expenses]);
 
   const totalSpentMonth = useMemo(() => {
-    return currentMonthExpenses.reduce((acc, curr) => acc + curr.convertedAmount, 0);
-  }, [currentMonthExpenses]);
+    return calculateCurrentMonthSpent(expenses);
+  }, [expenses]);
 
-  // Overall Total Budget
+  // Overall Total Budget (synced with Sidebar and Dashboard)
   const totalBudget = useMemo(() => {
-    const totalItem = editableBudgets.find((b) => b.category === 'Total');
-    return totalItem ? totalItem.monthlyLimit : user.monthlyBudget || 75000;
-  }, [editableBudgets, user.monthlyBudget]);
+    return calculateTotalBudget(editableBudgets, user);
+  }, [editableBudgets, user]);
 
   // Remaining days in month & Daily Allowance
   const { remainingDays, dailyAllowance } = useMemo(() => {
@@ -170,9 +184,22 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   }, [totalSpentMonth, totalBudget]);
 
   const handleLimitChange = (category: string, newLimit: number) => {
-    setEditableBudgets((prev) =>
-      prev.map((b) => (b.category === category ? { ...b, monthlyLimit: Math.max(0, newLimit) } : b))
-    );
+    setEditableBudgets((prev) => {
+      const exists = prev.some((b) => b.category === category);
+      if (exists) {
+        return prev.map((b) => (b.category === category ? { ...b, monthlyLimit: Math.max(0, newLimit) } : b));
+      } else {
+        return [
+          ...prev,
+          {
+            category,
+            monthlyLimit: Math.max(0, newLimit),
+            thresholds: [50, 80, 100],
+            period: 'monthly',
+          },
+        ];
+      }
+    });
     setIsSaved(false);
   };
 
@@ -223,9 +250,8 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
   const handleSave = () => {
     onSaveBudgets(editableBudgets);
     const totalItem = editableBudgets.find((b) => b.category === 'Total');
-    if (totalItem) {
-      onUpdateUser({ ...user, monthlyBudget: totalItem.monthlyLimit });
-    }
+    const resolvedLimit = totalItem ? totalItem.monthlyLimit : calculateTotalBudget(editableBudgets, user);
+    onUpdateUser({ ...user, monthlyBudget: resolvedLimit });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };

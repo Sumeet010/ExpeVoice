@@ -8,7 +8,7 @@ import { DatabaseService } from './services/dbService';
 
 dotenv.config();
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 export async function startServer() {
   // Connect to MongoDB
@@ -25,7 +25,12 @@ export async function startServer() {
   // Vite middleware for development vs static build in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        watch: {
+          ignored: ['**/data/**', '**/data/*', '**/server/**', '**/.git/**'],
+        },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
